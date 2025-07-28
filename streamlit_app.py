@@ -225,39 +225,43 @@ if "reasoning_step_counter" not in st.session_state:
 
 # ─── Helper Functions ─────────────────────────────────────────────────────────
 def render_interactive_reasoning_live(reasoning_steps, container):
-    """Show reasoning boxes appearing one by one in real-time during thinking phase."""
+    """Show reasoning buckets appearing one by one, with previous ones disappearing."""
     
-    # Show header
-    container.markdown(f"""
-    <div class="thought-process-header">
-        <span class="thought-process-title">Thinking...</span>
-    </div>
-    """, unsafe_allow_html=True)
+    # Create grouped reasoning buckets
+    reasoning_buckets = [
+        {
+            "summary": "Initial Analysis & Claims Examination",
+            "steps": reasoning_steps[:3]  # First 3 steps
+        },
+        {
+            "summary": "Credibility Assessment & Red Flags", 
+            "steps": reasoning_steps[3:6]  # Next 3 steps
+        },
+        {
+            "summary": "Final Evaluation & Conclusion",
+            "steps": reasoning_steps[6:]   # Remaining steps
+        }
+    ]
     
-    # Add reasoning boxes one by one
-    boxes_html = ""
-    for i, step in enumerate(reasoning_steps):
-        boxes_html += f"""
-        <div class="reasoning-box fade-in">
-            <div class="reasoning-summary">
-                <span class="reasoning-summary-text">{step["summary"]}</span>
-                <span class="dropdown-arrow">▼</span>
+    for bucket in reasoning_buckets:
+        # Clear container and show current bucket
+        with container.container():
+            # Show header
+            st.markdown(f"""
+            <div class="thought-process-header">
+                <span class="thought-process-title">Thinking...</span>
             </div>
-        </div>
-        """
+            """, unsafe_allow_html=True)
+            
+            # Show current reasoning bucket with dropdown
+            with st.expander(bucket["summary"], expanded=False):
+                for i, step in enumerate(bucket["steps"], start=1):
+                    st.markdown(f'<div class="reasoning-step"><strong>Step {i}:</strong> {step["detail"]}</div>', unsafe_allow_html=True)
         
-        # Update the display with current boxes
-        container.markdown(f"""
-        <div class="thought-process-header">
-            <span class="thought-process-title">Thinking...</span>
-        </div>
-        {boxes_html}
-        """, unsafe_allow_html=True)
-        
-        time.sleep(1.2)  # Delay between each reasoning box
+        time.sleep(2.0)  # Delay before next bucket
 
 def render_interactive_reasoning_final(reasoning_steps, thinking_time):
-    """Render the final interactive reasoning with single collapsible box."""
+    """Render the final interactive reasoning with first bucket only."""
     
     # Header with final timing
     st.markdown(f"""
@@ -267,15 +271,8 @@ def render_interactive_reasoning_final(reasoning_steps, thinking_time):
     </div>
     """, unsafe_allow_html=True)
     
-    # Single collapsible box with all reasoning steps
-    box_key = f"reasoning_all_{st.session_state.reasoning_step_counter}"
-    
-    # Use session state to track expansion
-    if box_key not in st.session_state:
-        st.session_state[box_key] = False
-    
-    # Create single reasoning expander using Streamlit's expander
-    with st.expander("Show thinking", expanded=False):
+    # Show only the first bucket summary with all reasoning steps inside
+    with st.expander("Initial Analysis & Claims Examination", expanded=False):
         for i, step in enumerate(reasoning_steps, start=1):
             st.markdown(f'<div class="reasoning-step"><strong>Step {i}:</strong> {step["detail"]}</div>', unsafe_allow_html=True)
 
