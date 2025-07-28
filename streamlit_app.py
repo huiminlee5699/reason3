@@ -73,7 +73,6 @@ st.markdown("""
         margin: 12px 16px;
         padding-left: 16px;
         background-color: transparent;
-        border-left: 3px solid #e1e5e9;
         line-height: 1.5;
         font-size: 16px;
         color: #2d2d2d;
@@ -255,8 +254,11 @@ def render_interactive_reasoning_live(reasoning_steps, container):
             
             # Show current reasoning bucket with dropdown
             with st.expander(bucket["summary"], expanded=False):
-                for i, step in enumerate(bucket["steps"], start=1):
-                    st.markdown(f'<div class="reasoning-step"><strong>Step {i}:</strong> {step["detail"]}</div>', unsafe_allow_html=True)
+                # Combine all step details into continuous prose
+                combined_text = " ".join([step["detail"] for step in bucket["steps"]])
+                # Replace numbered lists with line breaks for better formatting
+                formatted_text = combined_text.replace(") ", ")\n")
+                st.markdown(f'<div class="reasoning-step">{formatted_text}</div>', unsafe_allow_html=True)
         
         time.sleep(2.0)  # Delay before next bucket
 
@@ -273,8 +275,11 @@ def render_interactive_reasoning_final(reasoning_steps, thinking_time):
     
     # Show only the first bucket summary with all reasoning steps inside
     with st.expander("Initial Analysis & Claims Examination", expanded=False):
-        for i, step in enumerate(reasoning_steps, start=1):
-            st.markdown(f'<div class="reasoning-step"><strong>Step {i}:</strong> {step["detail"]}</div>', unsafe_allow_html=True)
+        # Combine all reasoning into continuous prose
+        combined_text = " ".join([step["detail"] for step in reasoning_steps])
+        # Replace numbered lists with line breaks for better formatting
+        formatted_text = combined_text.replace(") ", ")\n")
+        st.markdown(f'<div class="reasoning-step">{formatted_text}</div>', unsafe_allow_html=True)
 
 # ─── Render Chat History ──────────────────────────────────────────────────────
 for msg in st.session_state.messages:
