@@ -145,6 +145,37 @@ st.markdown("""
         line-height: 1.5;
     }
 
+    .generating-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 16px 0;
+        padding: 12px 16px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #007bff;
+    }
+
+    .generating-text {
+        font-size: 15px;
+        color: #2d2d2d;
+        font-weight: 500;
+    }
+
+    .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid #e1e5e9;
+        border-top: 2px solid #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to   { opacity: 1; transform: translateY(0); }
@@ -191,23 +222,44 @@ if "current_reasoning_history" not in st.session_state:
     st.session_state.current_reasoning_history = []
 if "reasoning_step_counter" not in st.session_state:
     st.session_state.reasoning_step_counter = 0
-if "condition" not in st.session_state:
-    st.session_state.condition = "interactive"  # "standard" or "interactive"
-
-# ─── Condition Toggle (for testing) ───────────────────────────────────────────
-with st.sidebar:
-    st.session_state.condition = st.selectbox(
-        "Research Condition:",
-        ["standard", "interactive"],
-        index=1 if st.session_state.condition == "interactive" else 0
-    )
-    st.caption("Standard: Live reasoning steps\nInteractive: Collapsible reasoning boxes")
 
 # ─── Helper Functions ─────────────────────────────────────────────────────────
-def render_interactive_reasoning(reasoning_steps, thinking_time):
-    """Render the interactive reasoning condition with collapsible boxes."""
+def render_interactive_reasoning_live(reasoning_steps, container):
+    """Show reasoning boxes appearing one by one in real-time during thinking phase."""
     
-    # Header with title and timing
+    # Show header
+    container.markdown(f"""
+    <div class="thought-process-header">
+        <span class="thought-process-title">Thinking...</span>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Add reasoning boxes one by one
+    boxes_html = ""
+    for i, step in enumerate(reasoning_steps):
+        boxes_html += f"""
+        <div class="reasoning-box fade-in">
+            <div class="reasoning-summary">
+                <span class="reasoning-summary-text">{step["summary"]}</span>
+                <span class="dropdown-arrow">▼</span>
+            </div>
+        </div>
+        """
+        
+        # Update the display with current boxes
+        container.markdown(f"""
+        <div class="thought-process-header">
+            <span class="thought-process-title">Thinking...</span>
+        </div>
+        {boxes_html}
+        """, unsafe_allow_html=True)
+        
+        time.sleep(1.2)  # Delay between each reasoning box
+
+def render_interactive_reasoning_final(reasoning_steps, thinking_time):
+    """Render the final interactive reasoning with clickable functionality."""
+    
+    # Header with final timing
     st.markdown(f"""
     <div class="thought-process-header">
         <span class="thought-process-title">Thought Process</span>
@@ -244,28 +296,18 @@ def render_interactive_reasoning(reasoning_steps, thinking_time):
                 </div>
                 """, unsafe_allow_html=True)
 
-def render_standard_reasoning(reasoning_steps):
-    """Render the standard reasoning condition with live steps."""
-    with st.expander("Show thinking", expanded=False):
-        for i, step in enumerate(reasoning_steps, start=1):
-            detail = step["detail"] if isinstance(step, dict) else step
-            st.markdown(f'<div class="reasoning-step"><strong>Step {i}:</strong> {detail}</div>', unsafe_allow_html=True)
-
 # ─── Render Chat History ──────────────────────────────────────────────────────
 for msg in st.session_state.messages:
     if msg["role"] == "user":
         st.markdown(f'<div class="user-message">{msg["content"]}</div>', unsafe_allow_html=True)
     else:
-        # Show reasoning based on condition
+        # Show reasoning if present
         if "reasoning" in msg:
-            if msg.get("condition") == "interactive":
-                render_interactive_reasoning(msg["reasoning"], msg.get("thinking_time", 0))
-            else:
-                render_standard_reasoning(msg["reasoning"])
+            render_interactive_reasoning_final(msg["reasoning"], msg.get("thinking_time", 0))
         
         st.markdown(f'<div class="assistant-message">{msg["content"]}</div>', unsafe_allow_html=True)
 
-# ─── Chat Input & Live Reasoning ──────────────────────────────────────────────
+# ─── Chat Input & Processing Flow ─────────────────────────────────────────────
 if prompt := st.chat_input("Ask anything..."):
     # Record & display user message
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -275,83 +317,63 @@ if prompt := st.chat_input("Ask anything..."):
     st.session_state.current_reasoning_history = []
     st.session_state.reasoning_step_counter += 1
 
-    # Generate reasoning steps & time them
+    # Generate reasoning steps
     reasoning_steps = generate_reasoning_steps_for_credibility_task()
+    
+    # PHASE 1: Show reasoning process in real-time
     start_time = time.time()
-
-    if st.session_state.condition == "interactive":
-        # Interactive condition: Show summary boxes during "thinking"
-        thinking_placeholder = st.empty()
-        
-        # Show "thinking" animation
-        for i in range(len(reasoning_steps)):
-            partial_steps = reasoning_steps[:i+1]
-            
-            with thinking_placeholder.container():
-                st.markdown(f"""
-                <div class="thought-process-header">
-                    <span class="thought-process-title">Thinking...</span>
-                    <span class="thinking-time">🤔</span>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                for j, step in enumerate(partial_steps):
-                    st.markdown(f"""
-                    <div class="reasoning-box fade-in">
-                        <div class="reasoning-summary">
-                            <span class="reasoning-summary-text">{step["summary"]}</span>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            
-            time.sleep(1.5)  # Shorter delay for interactive condition
-        
-        thinking_placeholder.empty()
-        
-    else:
-        # Standard condition: Live reasoning steps
-        exp = st.expander("Show thinking", expanded=False)
-        placeholder = exp.empty()
-
-        for step in reasoning_steps:
-            detail = step["detail"] if isinstance(step, dict) else step
-            st.session_state.current_reasoning_history.append(detail)
-            html = "".join(
-                f'<div class="reasoning-step"><strong>Step {i+1}:</strong> {s}</div>'
-                for i, s in enumerate(st.session_state.current_reasoning_history)
-            )
-            placeholder.markdown(html, unsafe_allow_html=True)
-            time.sleep(2.5)
-
-        placeholder.empty()
-
+    thinking_container = st.empty()
+    
+    render_interactive_reasoning_live(reasoning_steps, thinking_container)
+    
     thinking_duration = int(time.time() - start_time)
-
-    # Stream GPT response
+    
+    # Clear the live thinking display
+    thinking_container.empty()
+    
+    # PHASE 2: Show "generating response" status
+    generating_container = st.empty()
+    generating_container.markdown("""
+    <div class="generating-status">
+        <div class="spinner"></div>
+        <span class="generating-text">Generating response...</span>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # PHASE 3: Generate actual GPT response
     full_response = ""
-    response_ph = st.empty()
+    response_placeholder = st.empty()
+    
     try:
+        # Add a small delay to show the "generating" status
+        time.sleep(1)
+        
         stream = client.chat.completions.create(
             model="o1-mini",
             messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
             stream=True,
         )
+        
+        # Clear the generating status
+        generating_container.empty()
+        
+        # Stream the response
         for chunk in stream:
             if chunk.choices[0].delta.content:
                 full_response += chunk.choices[0].delta.content
-                response_ph.markdown(f'<div class="assistant-message">{full_response}</div>', unsafe_allow_html=True)
+                response_placeholder.markdown(f'<div class="assistant-message">{full_response}</div>', unsafe_allow_html=True)
 
-        # Store assistant message with reasoning and condition info
+        # Store assistant message with reasoning info
         st.session_state.messages.append({
             "role": "assistant",
             "content": full_response,
             "reasoning": reasoning_steps,
-            "thinking_time": thinking_duration,
-            "condition": st.session_state.condition
+            "thinking_time": thinking_duration
         })
 
-        # Rerun to show new reasoning interface above the latest message
+        # Rerun to show final reasoning interface above the response
         st.rerun()
 
     except Exception as e:
+        generating_container.empty()
         st.error(f"Error generating response: {e}")
