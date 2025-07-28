@@ -257,7 +257,7 @@ def render_interactive_reasoning_live(reasoning_steps, container):
         time.sleep(1.2)  # Delay between each reasoning box
 
 def render_interactive_reasoning_final(reasoning_steps, thinking_time):
-    """Render the final interactive reasoning with clickable functionality."""
+    """Render the final interactive reasoning with single collapsible box."""
     
     # Header with final timing
     st.markdown(f"""
@@ -267,34 +267,17 @@ def render_interactive_reasoning_final(reasoning_steps, thinking_time):
     </div>
     """, unsafe_allow_html=True)
     
-    # Create collapsible boxes for each reasoning step
-    for i, step in enumerate(reasoning_steps):
-        box_key = f"reasoning_box_{st.session_state.reasoning_step_counter}_{i}"
-        
-        # Use session state to track expansion
-        if box_key not in st.session_state:
-            st.session_state[box_key] = False
-        
-        # Create the reasoning box
-        col1, col2 = st.columns([1, 0.05])
-        
-        with col1:
-            # Summary box (clickable)
-            if st.button(
-                step["summary"], 
-                key=f"btn_{box_key}",
-                help="Click to expand details",
-                use_container_width=True
-            ):
-                st.session_state[box_key] = not st.session_state[box_key]
-            
-            # Show detail if expanded
-            if st.session_state[box_key]:
-                st.markdown(f"""
-                <div class="reasoning-detail">
-                    {step["detail"]}
-                </div>
-                """, unsafe_allow_html=True)
+    # Single collapsible box with all reasoning steps
+    box_key = f"reasoning_all_{st.session_state.reasoning_step_counter}"
+    
+    # Use session state to track expansion
+    if box_key not in st.session_state:
+        st.session_state[box_key] = False
+    
+    # Create single reasoning expander using Streamlit's expander
+    with st.expander("Show thinking", expanded=False):
+        for i, step in enumerate(reasoning_steps, start=1):
+            st.markdown(f'<div class="reasoning-step"><strong>Step {i}:</strong> {step["detail"]}</div>', unsafe_allow_html=True)
 
 # ─── Render Chat History ──────────────────────────────────────────────────────
 for msg in st.session_state.messages:
@@ -331,22 +314,11 @@ if prompt := st.chat_input("Ask anything..."):
     # Clear the live thinking display
     thinking_container.empty()
     
-    # PHASE 2: Show "generating response" status
-    generating_container = st.empty()
-    generating_container.markdown("""
-    <div class="generating-status">
-        <div class="spinner"></div>
-        <span class="generating-text">Generating response...</span>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # PHASE 3: Generate actual GPT response
+    # PHASE 2: Generate actual GPT response
     full_response = ""
     response_placeholder = st.empty()
     
     try:
-        # Add a small delay to show the "generating" status
-        time.sleep(1)
         
         stream = client.chat.completions.create(
             model="o1-mini",
@@ -355,7 +327,6 @@ if prompt := st.chat_input("Ask anything..."):
         )
         
         # Clear the generating status
-        generating_container.empty()
         
         # Stream the response
         for chunk in stream:
@@ -375,5 +346,4 @@ if prompt := st.chat_input("Ask anything..."):
         st.rerun()
 
     except Exception as e:
-        generating_container.empty()
         st.error(f"Error generating response: {e}")
