@@ -1,43 +1,66 @@
 import streamlit as st
 import time
-from openai import OpenAI
 
-def generate_reasoning_steps_for_credibility_task():
-    """Generate realistic reasoning steps for the social media credibility evaluation task."""
+def generate_fixed_reasoning_steps():
+    """Generate fixed reasoning steps for the social media credibility evaluation task."""
     return [
         {
-            "summary": "Analyzing the post's claims systematically",
-            "detail": "I need to evaluate this social media post about green tea and cancer prevention for credibility. Let me break down the claims systematically."
+            "summary": "Analyzing vague claims and missing citations",
+            "detail": "\"BREAKING: New peer-reviewed study from Stanford University\" - This is a vague claim without a specific citation. Real scientific breakthroughs would be properly cited.",
+            "duration": 1
         },
         {
-            "summary": "Examining specific statistical claims",
-            "detail": "First, I'll examine the specific claims: 1) A peer‑reviewed Stanford study exists, 2) 50,000 participants over 10 years, 3) 87% cancer risk reduction from 3 cups daily, 4) 'Big Pharma doesn't want you to know.'"
+            "summary": "Evaluating dramatic statistical claims",
+            "detail": "\"proves that drinking 3 cups of green tea daily reduces cancer risk by 87%\" - The word \"proves\" is a red flag. Scientific studies rarely \"prove\" anything definitively, especially with such a specific and dramatic reduction percentage. An 87% reduction would be extraordinary and would be front-page news everywhere.",
+            "duration": 4
         },
         {
-            "summary": "Checking methodology plausibility",
-            "detail": "Checking the methodology claims: A 10‑year study with 50,000 participants sounds plausible for epidemiological research, but I need to verify if such a study actually exists from Stanford."
+            "summary": "Assessing study methodology claims",
+            "detail": "\"The study followed 50,000 participants for 10 years\" - While this sounds like it could be a legitimate study design, without verification it's just numbers that could be made up.",
+            "duration": 7
         },
         {
-            "summary": "Evaluating effect size credibility",
-            "detail": "The 87% risk reduction is an extremely high effect size that would be groundbreaking if true. Such dramatic results would typically be widely reported in major medical journals and news outlets."
+            "summary": "Identifying conspiracy theory elements",
+            "detail": "\"Big Pharma doesn't want you to know this!\" - This is a classic conspiracy theory trope used in health misinformation.",
+            "duration": 2
         },
         {
-            "summary": "Identifying misinformation red flags",
-            "detail": "Red flags I'm noticing: 1) The 'Big Pharma conspiracy' language, 2) Urgency to 'share before they take it down,' 3) Hashtags like #GreenTeaCure suggest oversimplification, 4) No citation of the actual study."
+            "summary": "Recognizing urgency manipulation tactics",
+            "detail": "\"Share before they take it down!\" - This is a common tactic to create urgency and get people to share without fact-checking.",
+            "duration": 3
         },
         {
-            "summary": "Comparing with legitimate research",
-            "detail": "I should also consider what legitimate research says about green tea and cancer. While some studies suggest modest benefits, the scientific consensus doesn't support such dramatic claims."
+            "summary": "Analyzing misleading hashtags",
+            "detail": "Hashtags like \"#GreenTeaCure #CancelCancer\" - These suggest the post is claiming green tea can cure or prevent cancer, which would be a medical claim requiring substantial evidence.",
+            "duration": 2
         },
         {
-            "summary": "Analyzing persuasive language patterns",
-            "detail": "The post uses persuasive but unscientific language patterns common in health misinformation: definitive claims ('proves'), conspiracy theories, and emotional appeals."
-        },
-        {
-            "summary": "Final credibility assessment",
-            "detail": "Based on my analysis, this appears to be misleading health information that could potentially harm people by promoting false hope or delaying proper medical care."
+            "summary": "Planning verification research",
+            "detail": "I should search for recent Stanford studies on green tea and cancer to see if there's any legitimate research this could be referring to, even if the post is exaggerating the findings.",
+            "duration": 6
         }
     ]
+
+def get_fixed_response():
+    """Return the fixed response for the credibility evaluation."""
+    return """Based on my search of recent Stanford research and the broader scientific literature on green tea and cancer, **this post should be flagged as misleading**. Here's why:
+
+**Red Flags in the Post:**
+1. **No verifiable study found**: Despite searching Stanford's recent cancer research, I found no study matching these claims. Stanford researchers are currently working on AI cancer prediction tools, new surgical techniques, and immunotherapies - but nothing about green tea.
+2. **Exaggerated language**: The use of "PROVES" is a major red flag. Scientific studies show "mixed" evidence for green tea's cancer-fighting properties, with some studies showing "promising correlations" while others "have found little to no significant impact on cancer incidence" Green tea and cancer | EBSCO Research Starters.
+3. **Unrealistic claim**: An 87% reduction in cancer risk would be extraordinary and would be front-page news worldwide. Current research shows "mixed findings" for most cancer types and "mostly null association" for several others Green tea and cancer and cardiometabolic diseases: a review of the current epidemiological evidence | European Journal of Clinical Nutrition.
+4. **Conspiracy theory elements**: "Big Pharma doesn't want you to know" and "Share before they take it down" are classic misinformation tactics designed to bypass critical thinking.
+
+**What the Science Actually Shows:**
+Research indicates green tea "may be linked to a reduced risk of certain cancers, particularly stomach cancer in populations with high green tea consumption" but "clinical evidence regarding green tea's cancer-fighting properties is mixed" Green tea and cancer | EBSCO Research Starters. For most cancer types, studies show "mixed findings" or "mostly null association" Green tea and cancer and cardiometabolic diseases: a review of the current epidemiological evidence | European Journal of Clinical Nutrition.
+
+**Recommendations for Users:**
+1. **Don't share** - This appears to be health misinformation
+2. **Check sources** - Look for peer-reviewed studies with proper citations
+3. **Be skeptical** of dramatic health claims with conspiracy elements
+4. **Consult healthcare providers** for evidence-based health information
+
+**Verdict**: This post is misleading and potentially harmful as it may discourage people from seeking proven cancer prevention methods in favor of unsubstantiated claims."""
 
 # ─── Custom CSS ────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -210,10 +233,6 @@ st.markdown("""
 # ─── Title ────────────────────────────────────────────────────────────────────
 st.markdown('<h1 class="main-title">What\'s on the agenda today?</h1>', unsafe_allow_html=True)
 
-# ─── OpenAI Client ────────────────────────────────────────────────────────────
-openai_api_key = st.secrets["openai_api_key"]
-client = OpenAI(api_key=openai_api_key)
-
 # ─── Session State Init ───────────────────────────────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -223,47 +242,29 @@ if "reasoning_step_counter" not in st.session_state:
     st.session_state.reasoning_step_counter = 0
 
 # ─── Helper Functions ─────────────────────────────────────────────────────────
-def render_interactive_reasoning_live(reasoning_steps, container):
-    """Show reasoning buckets appearing one by one, with previous ones disappearing."""
-    
-    # Create grouped reasoning buckets
-    reasoning_buckets = [
-        {
-            "summary": "Initial Analysis & Claims Examination",
-            "steps": reasoning_steps[:3]  # First 3 steps
-        },
-        {
-            "summary": "Credibility Assessment & Red Flags", 
-            "steps": reasoning_steps[3:6]  # Next 3 steps
-        },
-        {
-            "summary": "Final Evaluation & Conclusion",
-            "steps": reasoning_steps[6:]   # Remaining steps
-        }
-    ]
-    
-    for bucket in reasoning_buckets:
-        # Clear container and show current bucket
-        with container.container():
-            # Show header
-            st.markdown(f"""
-            <div class="thought-process-header">
-                <span class="thought-process-title">Thinking...</span>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Show current reasoning bucket with dropdown
-            with st.expander(bucket["summary"], expanded=False):
-                # Combine all step details into continuous prose
-                combined_text = " ".join([step["detail"] for step in bucket["steps"]])
-                # Replace numbered lists with line breaks for better formatting
-                formatted_text = combined_text.replace(") ", ")\n")
-                st.markdown(f'<div class="reasoning-step">{formatted_text}</div>', unsafe_allow_html=True)
+def render_reasoning_step_live(step, container):
+    """Show a single reasoning step appearing in real-time."""
+    with container.container():
+        # Show header with thinking status
+        st.markdown(f"""
+        <div class="thought-process-header">
+            <span class="thought-process-title">Thinking...</span>
+        </div>
+        """, unsafe_allow_html=True)
         
-        time.sleep(2.0)  # Delay before next bucket
+        # Show current reasoning step with dropdown
+        with st.expander(step["summary"], expanded=False):
+            st.markdown(f'<div class="reasoning-step">{step["detail"]}</div>', unsafe_allow_html=True)
+
+def render_interactive_reasoning_live(reasoning_steps, container):
+    """Show reasoning steps appearing one by one, each replacing the previous."""
+    for step in reasoning_steps:
+        # Clear container and show current step
+        render_reasoning_step_live(step, container)
+        time.sleep(step["duration"])  # Use the duration from each step
 
 def render_interactive_reasoning_final(reasoning_steps, thinking_time):
-    """Render the final interactive reasoning with first bucket only."""
+    """Render the final interactive reasoning with all steps in one expandable section."""
     
     # Header with final timing
     st.markdown(f"""
@@ -273,13 +274,26 @@ def render_interactive_reasoning_final(reasoning_steps, thinking_time):
     </div>
     """, unsafe_allow_html=True)
     
-    # Show only the first bucket summary with all reasoning steps inside
-    with st.expander("Initial Analysis & Claims Examination", expanded=False):
-        # Combine all reasoning into continuous prose
-        combined_text = " ".join([step["detail"] for step in reasoning_steps])
-        # Replace numbered lists with line breaks for better formatting
-        formatted_text = combined_text.replace(") ", ")\n")
-        st.markdown(f'<div class="reasoning-step">{formatted_text}</div>', unsafe_allow_html=True)
+    # Show all reasoning in one expandable section
+    with st.expander("Complete reasoning analysis", expanded=False):
+        # Combine all reasoning steps into one continuous text
+        full_reasoning = """This social media post contains several red flags that suggest it's likely misleading or false. Let me analyze each element:
+
+1. "BREAKING: New peer-reviewed study from Stanford University" - This is a vague claim without a specific citation. Real scientific breakthroughs would be properly cited.
+
+2. "proves that drinking 3 cups of green tea daily reduces cancer risk by 87%" - The word "proves" is a red flag. Scientific studies rarely "prove" anything definitively, especially with such a specific and dramatic reduction percentage. An 87% reduction would be extraordinary and would be front-page news everywhere.
+
+3. "The study followed 50,000 participants for 10 years" - While this sounds like it could be a legitimate study design, without verification it's just numbers that could be made up.
+
+4. "Big Pharma doesn't want you to know this!" - This is a classic conspiracy theory trope used in health misinformation.
+
+5. "Share before they take it down!" - This is a common tactic to create urgency and get people to share without fact-checking.
+
+6. Hashtags like "#GreenTeaCure #CancelCancer" - These suggest the post is claiming green tea can cure or prevent cancer, which would be a medical claim requiring substantial evidence.
+
+I should search for recent Stanford studies on green tea and cancer to see if there's any legitimate research this could be referring to, even if the post is exaggerating the findings."""
+        
+        st.markdown(f'<div class="reasoning-step">{full_reasoning}</div>', unsafe_allow_html=True)
 
 # ─── Render Chat History ──────────────────────────────────────────────────────
 for msg in st.session_state.messages:
@@ -302,8 +316,8 @@ if prompt := st.chat_input("Ask anything..."):
     st.session_state.current_reasoning_history = []
     st.session_state.reasoning_step_counter += 1
 
-    # Generate reasoning steps
-    reasoning_steps = generate_reasoning_steps_for_credibility_task()
+    # Generate fixed reasoning steps
+    reasoning_steps = generate_fixed_reasoning_steps()
     
     # PHASE 1: Show reasoning process in real-time
     start_time = time.time()
@@ -316,36 +330,19 @@ if prompt := st.chat_input("Ask anything..."):
     # Clear the live thinking display
     thinking_container.empty()
     
-    # PHASE 2: Generate actual GPT response
-    full_response = ""
-    response_placeholder = st.empty()
+    # PHASE 2: Show fixed response
+    fixed_response = get_fixed_response()
     
-    try:
-        
-        stream = client.chat.completions.create(
-            model="o1-mini",
-            messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
-            stream=True,
-        )
-        
-        # Clear the generating status
-        
-        # Stream the response
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                full_response += chunk.choices[0].delta.content
-                response_placeholder.markdown(f'<div class="assistant-message">{full_response}</div>', unsafe_allow_html=True)
+    # Display the response immediately (no streaming needed since it's fixed)
+    st.markdown(f'<div class="assistant-message">{fixed_response}</div>', unsafe_allow_html=True)
 
-        # Store assistant message with reasoning info
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": full_response,
-            "reasoning": reasoning_steps,
-            "thinking_time": thinking_duration
-        })
+    # Store assistant message with reasoning info
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": fixed_response,
+        "reasoning": reasoning_steps,
+        "thinking_time": thinking_duration
+    })
 
-        # Rerun to show final reasoning interface above the response
-        st.rerun()
-
-    except Exception as e:
-        st.error(f"Error generating response: {e}")
+    # Rerun to show final reasoning interface above the response
+    st.rerun()
