@@ -330,11 +330,21 @@ if prompt := st.chat_input("Ask anything..."):
     # Clear the live thinking display
     thinking_container.empty()
     
-    # PHASE 2: Show fixed response
+    # PHASE 2: Show fixed response with typing illusion
     fixed_response = get_fixed_response()
     
-    # Display the response immediately (no streaming needed since it's fixed)
-    st.markdown(f'<div class="assistant-message">{fixed_response}</div>', unsafe_allow_html=True)
+    # Create typing illusion
+    response_placeholder = st.empty()
+    displayed_response = ""
+    
+    # Split response into words for faster typing effect
+    words = fixed_response.split(' ')
+    
+    for i, word in enumerate(words):
+        displayed_response += word + ' '
+        response_placeholder.markdown(f'<div class="assistant-message">{displayed_response}</div>', unsafe_allow_html=True)
+        # Fast typing speed - adjust this value to make it faster/slower
+        time.sleep(0.02)  # 20ms per word - very fast but still visible
 
     # Store assistant message with reasoning info
     st.session_state.messages.append({
