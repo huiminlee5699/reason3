@@ -240,9 +240,13 @@ if "current_reasoning_history" not in st.session_state:
     st.session_state.current_reasoning_history = []
 if "reasoning_step_counter" not in st.session_state:
     st.session_state.reasoning_step_counter = 0
+if "user_clicked_reasoning" not in st.session_state:
+    st.session_state.user_clicked_reasoning = False
+if "current_step_index" not in st.session_state:
+    st.session_state.current_step_index = 0
 
 # ─── Helper Functions ─────────────────────────────────────────────────────────
-def render_reasoning_step_live(step, container):
+def render_reasoning_step_live(step, step_index, container):
     """Show a single reasoning step appearing in real-time."""
     with container.container():
         # Show header with thinking status
@@ -252,15 +256,26 @@ def render_reasoning_step_live(step, container):
         </div>
         """, unsafe_allow_html=True)
         
+        # Determine if this step should be expanded
+        # Expand if user has clicked a previous step, or if this is the first step and user hasn't clicked yet
+        should_expand = st.session_state.user_clicked_reasoning or step_index == 0
+        
         # Show current reasoning step with dropdown
-        with st.expander(step["summary"], expanded=False):
+        expanded_state = st.expander(step["summary"], expanded=should_expand)
+        
+        # Check if user clicked this expander
+        if expanded_state:
+            st.session_state.user_clicked_reasoning = True
+            st.session_state.current_step_index = step_index
+        
+        with expanded_state:
             st.markdown(f'<div class="reasoning-step">{step["detail"]}</div>', unsafe_allow_html=True)
 
 def render_interactive_reasoning_live(reasoning_steps, container):
     """Show reasoning steps appearing one by one, each replacing the previous."""
-    for step in reasoning_steps:
+    for i, step in enumerate(reasoning_steps):
         # Clear container and show current step
-        render_reasoning_step_live(step, container)
+        render_reasoning_step_live(step, i, container)
         time.sleep(step["duration"])  # Use the duration from each step
 
 def render_interactive_reasoning_final(reasoning_steps, thinking_time):
@@ -312,9 +327,11 @@ if prompt := st.chat_input("Ask anything..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.markdown(f'<div class="user-message">{prompt}</div>', unsafe_allow_html=True)
 
-    # Reset reasoning history, increment counter
+    # Reset reasoning history, increment counter, and reset interaction state
     st.session_state.current_reasoning_history = []
     st.session_state.reasoning_step_counter += 1
+    st.session_state.user_clicked_reasoning = False
+    st.session_state.current_step_index = 0
 
     # Generate fixed reasoning steps
     reasoning_steps = generate_fixed_reasoning_steps()
